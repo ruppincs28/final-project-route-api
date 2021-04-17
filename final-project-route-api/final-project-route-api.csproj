@@ -195,7 +195,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\ClientRouteCalculatorRequest.cs" />
-    <Compile Include="Models\Coordinate.cs" />
+    <Compile Include="Models\Coordinates.cs" />
     <Compile Include="Models\HTTP\HTTPHelpers.cs" />
     <Compile Include="Models\HTTP\JSONHelpers.cs" />
     <Compile Include="Models\RouteCalculator.cs" />

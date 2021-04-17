@@ -8,15 +8,15 @@ namespace final_project_route_api.Models
     public class ClientRouteCalculatorRequest
     {
         List<string> companiesWithAddresses;
-        Coordinate coordinate;
+        Coordinates coordinates;
 
-        public ClientRouteCalculatorRequest(List<string> companiesWithAddresses, Coordinate coordinate)
+        public ClientRouteCalculatorRequest(List<string> companiesWithAddresses, Coordinates coordinates)
         {
             CompaniesWithAddresses = companiesWithAddresses;
-            Coordinate = coordinate;
+            Coordinates = coordinates;
         }
 
         public List<string> CompaniesWithAddresses { get => companiesWithAddresses; set => companiesWithAddresses = value; }
-        public Coordinate Coordinate { get => coordinate; set => coordinate = value; }
+        public Coordinates Coordinates { get => coordinates; set => coordinates = value; }
     }
 }

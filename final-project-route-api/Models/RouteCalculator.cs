@@ -11,18 +11,18 @@ namespace final_project_route_api.Models
     public class RouteCalculator
     {
         string name;
-        Coordinate coordinate;
+        Coordinates coordinates;
         string steps;
 
-        public RouteCalculator(string name, Coordinate coordinate, string steps)
+        public RouteCalculator(string name, Coordinates coordinates, string steps)
         {
             Name = name;
-            Coordinate = coordinate;
+            Coordinates = coordinates;
             Steps = steps;
         }
 
         public string Name { get => name; set => name = value; }
-        public Coordinate Coordinate { get => coordinate; set => coordinate = value; }
+        public Coordinates Coordinates { get => coordinates; set => coordinates = value; }
         public string Steps { get => steps; set => steps = value; }
 
         public static string ExtractFormattedAddress(string json)
@@ -32,14 +32,14 @@ namespace final_project_route_api.Models
             return jo["candidates"].First["formatted_address"].ToString();
         }
 
-        public static Coordinate ExtractLatLng(string json)
+        public static Coordinates ExtractLatLng(string json)
         {
             JObject jo = JObject.Parse(json);
 
             double lat = Convert.ToDouble(jo["results"].First["geometry"]["location"]["lat"].ToString());
             double lng = Convert.ToDouble(jo["results"].First["geometry"]["location"]["lng"].ToString());
 
-            return new Coordinate(lat, lng);
+            return new Coordinates(lat, lng);
         }
 
         public static string ExtractSteps(string json)
@@ -67,9 +67,9 @@ namespace final_project_route_api.Models
             string API_KEY = Environment.ExpandEnvironmentVariables(ConfigurationManager.AppSettings["GOOGLE_API_KEY"]);
             List<RouteCalculator> resultList = new List<RouteCalculator>();
 
-            foreach (string cwa in rcr.CompaniesWithAddresses)
+            foreach (string company in rcr.CompaniesWithAddresses)
             {
-                string companyNameWithStateEscaped = Uri.EscapeUriString(cwa);
+                string companyNameWithStateEscaped = Uri.EscapeUriString(company);
 
                 // Extract exact address from company + state combination
                 string json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?" +
@@ -80,14 +80,14 @@ namespace final_project_route_api.Models
                 // Extract latitude, longitude from an address
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/geocode/json?" +
                     $"address={exactAddressEscaped}&key={API_KEY}");
-                Coordinate coordinate = ExtractLatLng(json);
+                Coordinates coordinates = ExtractLatLng(json);
 
                 // Get Route
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/directions/json" +
-                    $"?origin={rcr.Coordinate.Lat},{rcr.Coordinate.Lng}&destination={coordinate.Lat},{coordinate.Lng}&mode=transit&key={API_KEY}&language=en-US");
+                    $"?origin={rcr.Coordinates.Lat},{rcr.Coordinates.Lng}&destination={coordinates.Lat},{coordinates.Lng}&mode=transit&key={API_KEY}&language=en-US");
                 string steps = ExtractSteps(json);
 
-                RouteCalculator route = new RouteCalculator(exactAddress, coordinate, steps);
+                RouteCalculator route = new RouteCalculator(exactAddress, coordinates, steps);
                 resultList.Add(route);
             }
 

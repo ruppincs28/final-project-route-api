@@ -5,12 +5,12 @@ using System.Web;
 
 namespace final_project_route_api.Models
 {
-    public class Coordinate
+    public class Coordinates
     {
         double lat;
         double lng;
 
-        public Coordinate(double lat, double lng)
+        public Coordinates(double lat, double lng)
         {
             Lat = lat;
             Lng = lng;
