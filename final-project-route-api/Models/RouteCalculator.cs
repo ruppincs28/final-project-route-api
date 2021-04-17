@@ -62,30 +62,30 @@ namespace final_project_route_api.Models
             return returnVal.Substring(0, returnVal.Length - 3);
         }
 
-        public static List<RouteCalculator> Calculate(ClientCompaniesWithAddresses ccwaRes)
+        public static List<RouteCalculator> Calculate(ClientRouteCalculatorRequest rcr)
         {
             string API_KEY = Environment.ExpandEnvironmentVariables(ConfigurationManager.AppSettings["GOOGLE_API_KEY"]);
             List<RouteCalculator> resultList = new List<RouteCalculator>();
 
-            foreach (string ccwa in ccwaRes.CompaniesWithAddresses)
+            foreach (string cwa in rcr.CompaniesWithAddresses)
             {
-                string companyNameWithStateEscaped = Uri.EscapeUriString(ccwa);
+                string companyNameWithStateEscaped = Uri.EscapeUriString(cwa);
 
                 // Extract exact address from company + state combination
                 string json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?" +
                     $"input={companyNameWithStateEscaped}&inputtype=textquery&language=en-US&fields=all&key={API_KEY}");
-                string exactAddress = RouteCalculator.ExtractFormattedAddress(json);
+                string exactAddress = ExtractFormattedAddress(json);
                 string exactAddressEscaped = Uri.EscapeUriString(exactAddress);
 
                 // Extract latitude, longitude from an address
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/geocode/json?" +
                     $"address={exactAddressEscaped}&key={API_KEY}");
-                Coordinate coordinate = RouteCalculator.ExtractLatLng(json);
+                Coordinate coordinate = ExtractLatLng(json);
 
                 // Get Route
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/directions/json" +
-                    $"?origin=32.1774678,34.8554012&destination={coordinate.Lat},{coordinate.Lng}&mode=transit&key={API_KEY}&language=en-US");
-                string steps = RouteCalculator.ExtractSteps(json);
+                    $"?origin={rcr.Coordinate.Lat},{rcr.Coordinate.Lng}&destination={coordinate.Lat},{coordinate.Lng}&mode=transit&key={API_KEY}&language=en-US");
+                string steps = ExtractSteps(json);
 
                 RouteCalculator route = new RouteCalculator(exactAddress, coordinate, steps);
                 resultList.Add(route);

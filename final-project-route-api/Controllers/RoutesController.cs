@@ -17,11 +17,11 @@ namespace final_project_route_api.Controllers
     {
         [HttpPost]
         [Route("api/routes/calculate")]
-        public IHttpActionResult RetrievePlaceData([FromBody]ClientCompaniesWithAddresses ccwaRes)
+        public IHttpActionResult RetrievePlaceData([FromBody]ClientRouteCalculatorRequest rcr)
         {
             try
             {
-                List<RouteCalculator> resultList = RouteCalculator.Calculate(ccwaRes);
+                List<RouteCalculator> resultList = RouteCalculator.Calculate(rcr);
                 return Ok(resultList);
             }
             catch (Exception ex)
