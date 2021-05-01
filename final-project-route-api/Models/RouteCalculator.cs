@@ -48,29 +48,6 @@ namespace final_project_route_api.Models
             return new Coordinates(lat, lng);
         }
 
-        public static Coordinates ExtractFirstStationsCoordinates(string json)
-        {
-            JObject jObj = JObject.Parse(json);
-            JArray jArr = (JArray)jObj["routes"].First["legs"].First["steps"];
-            Coordinates returnVal = new Coordinates(0, 0);
-
-            foreach (var item in jArr.Children())
-            {
-                var itemProperties = item.Children<JProperty>();
-                var travelMode = itemProperties.FirstOrDefault(x => x.Name == "travel_mode");
-                var travelModeValue = travelMode.Value.ToString();
-
-                if (travelModeValue == "TRANSIT")
-                {
-                    var startLocation = itemProperties.FirstOrDefault(x => x.Name == "start_location");
-                    returnVal = new Coordinates(
-                        Convert.ToDouble(startLocation.Value["lat"].ToString()), Convert.ToDouble(startLocation.Value["lng"].ToString()));
-                }
-            }
-
-            return returnVal;
-        }
-
         public static int CalculateSecondsUntilStation(string json, Coordinates stopCoordinates)
         {
             JObject jObj = JObject.Parse(json);
@@ -186,7 +163,6 @@ namespace final_project_route_api.Models
                     }
                 }
 
-                Coordinates firstStationCoordinates = ExtractFirstStationsCoordinates(json);
                 bool isBeneficial = false;
 
                 RouteCalculator route = new RouteCalculator(
