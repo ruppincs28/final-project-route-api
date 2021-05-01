@@ -86,8 +86,8 @@ namespace final_project_route_api.Models
                 var durationValue = Convert.ToInt32(duration.Value["value"].ToString());
                 var startLocation = itemProperties.FirstOrDefault(x => x.Name == "start_location");
 
-                if (Convert.ToInt32(startLocation.Value["lat"].ToString()) == stopCoordinates.Lat
-                    && Convert.ToInt32(startLocation.Value["lng"].ToString()) == stopCoordinates.Lng)
+                if (Convert.ToDouble(startLocation.Value["lat"].ToString()) == stopCoordinates.Lat
+                    && Convert.ToDouble(startLocation.Value["lng"].ToString()) == stopCoordinates.Lng)
                 {
                     break;
                 }
@@ -164,13 +164,13 @@ namespace final_project_route_api.Models
 
                 // Get Route
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/directions/json" +
-                    $"?origin={originCoordinates.Lat},{originCoordinates.Lng}&destination={destCoordinates.Lat},{destCoordinates.Lng}&mode=transit&key={API_KEY}&language=en-US&departure_time=1619897612");
+                    $"?origin={originCoordinates.Lat},{originCoordinates.Lng}&destination={destCoordinates.Lat},{destCoordinates.Lng}&mode=transit&key={API_KEY}&language=en-US");
 
                 /* Calculate whether it is beneficial to use a car to drive to one of the stations */
                 // Loop over to get all station coordinates
                 List<Coordinates> stationsInRoute = GetStationsInRoute(json);
                 // Calculate route to station via private vehicle
-                int minLengthId = -1, minLengthRoute = Int32.MaxValue;
+                int minLengthId = -1, minLengthRoute = int.MaxValue;
 
                 for (int i = 0; i < stationsInRoute.Count; i++)
                 {
@@ -190,7 +190,7 @@ namespace final_project_route_api.Models
                 bool isBeneficial = false;
 
                 RouteCalculator route = new RouteCalculator(
-                    exactAddress, destCoordinates, firstStationCoordinates, "ABC", isBeneficial);
+                    exactAddress, originCoordinates, destCoordinates, $"{stationsInRoute[minLengthId].Lat} - {stationsInRoute[minLengthId].Lng}", isBeneficial);
                 resultList.Add(route);
             }
 
