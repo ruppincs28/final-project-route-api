@@ -21,7 +21,7 @@ namespace final_project_route_api.Controllers
         {
             try
             {
-                List<RouteCalculator> resultList = RouteCalculator.Calculate(rcr);
+                List<Route> resultList = RouteCalculator.Calculate(rcr);
                 return Ok(resultList);
             }
             catch (Exception ex)

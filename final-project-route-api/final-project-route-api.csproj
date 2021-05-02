@@ -198,7 +198,9 @@
     <Compile Include="Models\Coordinates.cs" />
     <Compile Include="Models\HTTP\HTTPHelpers.cs" />
     <Compile Include="Models\HTTP\JSONHelpers.cs" />
+    <Compile Include="Models\Route.cs" />
     <Compile Include="Models\RouteCalculator.cs" />
+    <Compile Include="Models\RouteCalculatorHelpers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

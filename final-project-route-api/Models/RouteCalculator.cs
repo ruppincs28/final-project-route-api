@@ -10,118 +10,10 @@ namespace final_project_route_api.Models
 {
     public class RouteCalculator
     {
-        string name;
-        Coordinates sourceCoordinates;
-        Coordinates destCoordinates;
-        string steps;
-        bool isCarDriveBeneficial;
-
-        public RouteCalculator(string name, Coordinates sourceCoordinates, Coordinates destCoordinates, string steps, bool isCarDriveBeneficial)
-        {
-            Name = name;
-            SourceCoordinates = sourceCoordinates;
-            DestCoordinates = destCoordinates;
-            Steps = steps;
-            IsCarDriveBeneficial = isCarDriveBeneficial;
-        }
-
-        public string Name { get => name; set => name = value; }
-        public Coordinates SourceCoordinates { get => sourceCoordinates; set => sourceCoordinates = value; }
-        public Coordinates DestCoordinates { get => destCoordinates; set => destCoordinates = value; }
-        public string Steps { get => steps; set => steps = value; }
-        public bool IsCarDriveBeneficial { get => isCarDriveBeneficial; set => isCarDriveBeneficial = value; }
-
-        public static string ExtractFormattedAddress(string json)
-        {
-            JObject jo = JObject.Parse(json);
-
-            return jo["candidates"].First["formatted_address"].ToString();
-        }
-
-        public static Coordinates ExtractLatLng(string json)
-        {
-            JObject jo = JObject.Parse(json);
-
-            double lat = Convert.ToDouble(jo["results"].First["geometry"]["location"]["lat"].ToString());
-            double lng = Convert.ToDouble(jo["results"].First["geometry"]["location"]["lng"].ToString());
-
-            return new Coordinates(lat, lng);
-        }
-
-        public static int CalculateSecondsUntilStation(string json, Coordinates stopCoordinates)
-        {
-            JObject jObj = JObject.Parse(json);
-            JArray jArr = (JArray)jObj["routes"].First["legs"].First["steps"];
-            int returnVal = 0;
-
-            foreach (var item in jArr.Children())
-            {
-                var itemProperties = item.Children<JProperty>();
-                var travelMode = itemProperties.FirstOrDefault(x => x.Name == "travel_mode");
-                var travelModeValue = travelMode.Value.ToString();
-                var duration = itemProperties.FirstOrDefault(x => x.Name == "duration");
-                var durationValue = Convert.ToInt32(duration.Value["value"].ToString());
-                var startLocation = itemProperties.FirstOrDefault(x => x.Name == "start_location");
-
-                if (Convert.ToDouble(startLocation.Value["lat"].ToString()) == stopCoordinates.Lat
-                    && Convert.ToDouble(startLocation.Value["lng"].ToString()) == stopCoordinates.Lng)
-                {
-                    break;
-                }
-
-                returnVal += durationValue;
-            }
-
-            return returnVal;
-        }
-
-        public static List<Coordinates> GetStationsInRoute(string json)
-        {
-            JObject jObj = JObject.Parse(json);
-            JArray jArr = (JArray)jObj["routes"].First["legs"].First["steps"];
-            List<Coordinates> stations = new List<Coordinates>();
-
-            foreach (var item in jArr.Children())
-            {
-                var itemProperties = item.Children<JProperty>();
-                var travelMode = itemProperties.FirstOrDefault(x => x.Name == "travel_mode");
-                var travelModeValue = travelMode.Value.ToString();
-
-                if (travelModeValue == "TRANSIT")
-                {
-                    var startLocation = itemProperties.FirstOrDefault(x => x.Name == "start_location");
-                    stations.Add(new Coordinates
-                        (Convert.ToDouble(startLocation.Value["lat"].ToString()), Convert.ToDouble(startLocation.Value["lng"].ToString())));
-                }
-            }
-
-            return stations;
-        }
-
-        public static int GetLengthOfRouteByCar(Coordinates origin, Coordinates dest, int secondsWithoutCar, string API_KEY)
-        {
-            string json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/directions/json" +
-                    $"?origin={origin.Lat},{origin.Lng}&destination={dest.Lat},{dest.Lng}&mode=driving&key={API_KEY}&language=en-US");
-            JObject jObj = JObject.Parse(json);
-            int secondsByCar = Convert.ToInt32(jObj["routes"].First["legs"].First["duration"]["value"].ToString());
-
-            return secondsByCar;
-        }
-
-        public static bool IsBeneficialToDriveByCar(Coordinates origin, Coordinates dest, int secondsWithoutCar, string API_KEY)
-        {
-            string json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/directions/json" +
-                    $"?origin={origin.Lat},{origin.Lng}&destination={dest.Lat},{dest.Lng}&mode=driving&key={API_KEY}&language=en-US");
-            JObject jObj = JObject.Parse(json);
-            int secondsByCar = Convert.ToInt32(jObj["routes"].First["legs"].First["duration"]["value"].ToString());
-
-            return secondsByCar < secondsWithoutCar;
-        }
-
-        public static List<RouteCalculator> Calculate(ClientRouteCalculatorRequest rcr)
+        public static List<Route> Calculate(ClientRouteCalculatorRequest rcr)
         {
             string API_KEY = Environment.ExpandEnvironmentVariables(ConfigurationManager.AppSettings["GOOGLE_API_KEY"]);
-            List<RouteCalculator> resultList = new List<RouteCalculator>();
+            List<Route> resultList = new List<Route>();
 
             foreach (string company in rcr.CompaniesWithAddresses)
             {
@@ -130,13 +22,13 @@ namespace final_project_route_api.Models
                 /* Extract exact address from company + state combination */
                 string json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?" +
                     $"input={companyNameWithStateEscaped}&inputtype=textquery&language=en-US&fields=all&key={API_KEY}");
-                string exactAddress = ExtractFormattedAddress(json);
+                string exactAddress = RouteCalculatorHelpers.ExtractFormattedAddress(json);
                 string exactAddressEscaped = Uri.EscapeUriString(exactAddress);
 
                 /* Extract latitude, longitude from an address */
                 json = HTTPHelpers.SynchronizedRequest("GET", $"https://maps.googleapis.com/maps/api/geocode/json?" +
                     $"address={exactAddressEscaped}&key={API_KEY}");
-                Coordinates destCoordinates = ExtractLatLng(json);
+                Coordinates destCoordinates = RouteCalculatorHelpers.ExtractLatLng(json);
                 Coordinates originCoordinates = new Coordinates(rcr.Coordinates.Lat, rcr.Coordinates.Lng);
 
                 // Get Route
@@ -145,16 +37,16 @@ namespace final_project_route_api.Models
 
                 /* Calculate whether it is beneficial to use a car to drive to one of the stations */
                 // Loop over to get all station coordinates
-                List<Coordinates> stationsInRoute = GetStationsInRoute(json);
+                List<Coordinates> stationsInRoute = RouteCalculatorHelpers.GetStationsInRoute(json);
                 // Calculate route to station via private vehicle
                 int minLengthId = -1, minLengthRoute = int.MaxValue;
 
                 for (int i = 0; i < stationsInRoute.Count; i++)
                 {
                     Coordinates c = stationsInRoute[i];
-                    if (IsBeneficialToDriveByCar(originCoordinates, c, CalculateSecondsUntilStation(json, c), API_KEY))
+                    if (RouteCalculatorHelpers.IsBeneficialToDriveByCar(originCoordinates, c, RouteCalculatorHelpers.CalculateSecondsUntilStation(json, c), API_KEY))
                     {
-                        int seconds = GetLengthOfRouteByCar(originCoordinates, c, CalculateSecondsUntilStation(json, c), API_KEY);
+                        int seconds = RouteCalculatorHelpers.GetLengthOfRouteByCar(originCoordinates, c, RouteCalculatorHelpers.CalculateSecondsUntilStation(json, c), API_KEY);
                         if (seconds <= minLengthRoute)
                         {
                             minLengthRoute = seconds;
@@ -163,10 +55,21 @@ namespace final_project_route_api.Models
                     }
                 }
 
-                bool isBeneficial = false;
+                bool isBeneficial;
+                Coordinates prvVehicleCoords;
+                try
+                {
+                    prvVehicleCoords = new Coordinates(stationsInRoute[minLengthId].Lat, stationsInRoute[minLengthId].Lng);
+                    isBeneficial = true;
+                } catch(ArgumentOutOfRangeException oorException)
+                {
+                    prvVehicleCoords = new Coordinates(0, 0);
+                    isBeneficial = false;
+                    Console.WriteLine(oorException.ToString());
+                }
 
-                RouteCalculator route = new RouteCalculator(
-                    exactAddress, originCoordinates, destCoordinates, $"{stationsInRoute[minLengthId].Lat} - {stationsInRoute[minLengthId].Lng}", isBeneficial);
+                Route route = new Route(
+                    exactAddress, originCoordinates, destCoordinates, prvVehicleCoords, isBeneficial);
                 resultList.Add(route);
             }
 
