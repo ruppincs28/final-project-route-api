@@ -39,28 +39,35 @@ namespace final_project_route_api.Models
                 // Loop over to get all station coordinates
                 List<Coordinates> stationsInRoute = RouteCalculatorHelpers.GetStationsInRoute(json);
                 // Calculate route to station via private vehicle
-                int minLengthId = -1, minLengthRoute = int.MaxValue;
+                int minLengthId = -1, minLengthRoute = int.MaxValue, differenceCarVsPublic = -1;
 
                 for (int i = 0; i < stationsInRoute.Count; i++)
                 {
                     Coordinates c = stationsInRoute[i];
-                    if (RouteCalculatorHelpers.IsBeneficialToDriveByCar(originCoordinates, c, RouteCalculatorHelpers.CalculateSecondsUntilStation(json, c), API_KEY))
+                    int secondsUntilStationNoCar = RouteCalculatorHelpers.CalculateSecondsUntilStation(json, c);
+                    if (RouteCalculatorHelpers.IsBeneficialToDriveByCar(originCoordinates, c, secondsUntilStationNoCar, API_KEY))
                     {
-                        int seconds = RouteCalculatorHelpers.GetLengthOfRouteByCar(originCoordinates, c, RouteCalculatorHelpers.CalculateSecondsUntilStation(json, c), API_KEY);
-                        if (seconds <= minLengthRoute)
+                        int seconds = RouteCalculatorHelpers.GetLengthOfRouteByCar(originCoordinates, c, secondsUntilStationNoCar, API_KEY);
+                        if (seconds < minLengthRoute)
                         {
                             minLengthRoute = seconds;
                             minLengthId = i;
+                            differenceCarVsPublic = secondsUntilStationNoCar - seconds;
                         }
                     }
                 }
 
                 bool isBeneficial;
                 Coordinates prvVehicleCoords;
+                string carDriveJustification = "";
                 try
                 {
                     prvVehicleCoords = new Coordinates(stationsInRoute[minLengthId].Lat, stationsInRoute[minLengthId].Lng);
                     isBeneficial = true;
+                    TimeSpan time = TimeSpan.FromSeconds(differenceCarVsPublic);
+                    string timeStr = time.ToString(@"hh\:mm\:ss");
+                    carDriveJustification = $"Driving with a private vehicle to 'PrivateVehicleCoordinates' " +
+                        $"and only then beginning the public transport journey will save {timeStr}";
                 } catch(ArgumentOutOfRangeException oorException)
                 {
                     prvVehicleCoords = new Coordinates(0, 0);
@@ -69,7 +76,7 @@ namespace final_project_route_api.Models
                 }
 
                 Route route = new Route(
-                    exactAddress, originCoordinates, destCoordinates, prvVehicleCoords, isBeneficial);
+                    exactAddress, originCoordinates, destCoordinates, prvVehicleCoords, isBeneficial, carDriveJustification);
                 resultList.Add(route);
             }
 
